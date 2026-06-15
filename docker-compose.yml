@@ -1,7 +1,27 @@
 services:
+  auth-service:
+    build: ./auth-service
+    ports:
+      - '3001:3001'
+    environment:
+      - PORT=3001
+      - MONGO_URI=mongodb://mongo:27017/authdb
+      - JWT_SECRET=supersecret
+    depends_on:
+      - mongo
+
+  resource-service:
+    build: ./resource-service
+    ports:
+      - "3002:3002"
+    environment:
+      - PORT=3002
+      - MONGO_URI=mongodb://mongo:27017/roommanager_resources
+    depends_on:
+      - mongo
+
   mongo:
     image: mongo:6.0
-    container_name: pfe-mongo
     ports:
       - '27017:27017'
     volumes:
@@ -9,80 +29,22 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: pfe-rabbitmq
     ports:
       - '5672:5672'
       - '15672:15672'
-
-  auth-service:
-    build: ./auth-service
-    container_name: pfe-auth-service
-    ports:
-      - '3001:3001'
     environment:
-      - PORT=3001
-      - MONGODB_URI=mongodb://mongo:27017/auth-db
-      - JWT_SECRET=secret123
-    depends_on:
-      - mongo
-
-  resource-service:
-    build: ./resource-service
-    container_name: pfe-resource-service
-    ports:
-      - '3002:3002'
-    environment:
-      - PORT=3002
-    depends_on:
-      - mongo
-
-  booking-service:
-    build: ./booking-service
-    container_name: pfe-booking-service
-    ports:
-      - '3003:3003'
-    environment:
-      - PORT=3003
-      - MONGODB_URI=mongodb://mongo:27017/booking-db
-      - RABBITMQ_URL=amqp://rabbitmq
-      - JWT_SECRET=secret123
-    depends_on:
-      - mongo
-      - rabbitmq
-      - auth-service
-      - resource-service
-
-  notification-service:
-    build: ./notification-service
-    container_name: pfe-notification-service
-    environment:
-      - RABBITMQ_URL=amqp://rabbitmq
-    depends_on:
-      - rabbitmq
-
-  frontend:
-    build: ./frontend-react
-    container_name: pfe-frontend
-    ports:
-      - '3000:3000'
-    environment:
-      - REACT_APP_AUTH_URL=http://auth-service:3001
-      - REACT_APP_BOOKING_URL=http://booking-service:3003
-      - REACT_APP_RESOURCE_URL=http://resource-service:3002
-    depends_on:
-      - auth-service
-      - booking-service
-      - resource-service
+      - RABBITMQ_DEFAULT_USER=guest
+      - RABBITMQ_DEFAULT_PASS=guest
 
   nginx:
     image: nginx:stable-alpine
-    container_name: pfe-nginx
     ports:
       - '8080:80'
     volumes:
       - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
     depends_on:
-      - frontend
+      - auth-service
+      - resource-service
 
 volumes:
   mongo-data:
